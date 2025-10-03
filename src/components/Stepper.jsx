@@ -1,12 +1,13 @@
+// src/components/Stepper.jsx
 /**
- * Reusable +/- stepper with themed colors
+ * Reusable +/- stepper with themed colors (mobile-friendly, equal button widths)
  * Props:
  *  - value: number
  *  - onChange: (nextValue:number) => void
- *  - theme: { wrap:string, btn:string, txt:string }  // from actionThemes.js
+ *  - theme: { wrap:string, btn:string, txt:string } // from actionThemes.js
  *  - min?: number (default 0)
  *  - step?: number (default 1)
- *  - className?: string (optional extra classes on wrapper)
+ *  - className?: string
  */
 export default function Stepper({
   value = 0,
@@ -16,34 +17,49 @@ export default function Stepper({
   step = 1,
   className = "",
 }) {
-  const dec = () => onChange(Math.max(min, (value || 0) - step));
-  const inc = () => onChange((value || 0) + step);
+  const safe = (n) => (Number.isFinite(n) ? n : 0);
+  const dec = () => onChange(Math.max(min, safe(value) - step));
+  const inc = () => onChange(safe(value) + step);
 
   return (
     <div
-      className={`mx-auto flex items-stretch rounded-xl border overflow-hidden ${theme.wrap} ${className}`}
+      className={`mx-auto w-full max-w-[220px] sm:max-w-[240px] md:max-w-[260px] shrink-0
+                  flex items-center rounded-xl border overflow-hidden ${theme.wrap} ${className}`}
       role="group"
       aria-label="Stepper"
     >
+      {/* Fixed-size left button */}
       <button
         type="button"
         onClick={dec}
-        className={`px-4 py-3 border-r text-2xl leading-none font-bold ${theme.btn}`}
+        className={`flex items-center justify-center
+                    w-11 h-11 sm:w-12 sm:h-12
+                    text-2xl leading-none font-bold select-none active:scale-[0.98]
+                    border-r ${theme.btn}`}
         aria-label="Decrement"
       >
         –
       </button>
+
+      {/* Value cell (fixed height; flexible width) */}
       <div
-        className={`w-16 sm:w-20 px-3 py-3 text-center font-semibold text-base sm:text-lg ${theme.txt}`}
+        className={`flex-1 h-11 sm:h-12 px-3
+                    flex items-center justify-center
+                    font-semibold text-base sm:text-lg ${theme.txt}`}
         aria-live="polite"
         aria-atomic="true"
       >
-        {Number.isFinite(value) ? value : 0}
+        {safe(value)}
       </div>
+
+      {/* Fixed-size right button (identical width to left) */}
       <button
         type="button"
         onClick={inc}
-        className={`px-4 py-3 border-l text-2xl leading-none font-bold ${theme.btn}`}
+        className={`flex items-center justify-center
+                    w-11 h-11 sm:w-12 sm:h-12
+                    text-2xl leading-none font-bold select-none active:scale-[0.98]
+                    border-l ${theme.btn}`}
         aria-label="Increment"
       >
         +

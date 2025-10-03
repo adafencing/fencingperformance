@@ -1,5 +1,7 @@
 // src/features/dashboard/Dashboard.jsx
-import { useMemo, useState } from "react";
+
+import { useMemo, useState, useEffect, useRef } from "react";
+
 import Modal from "../../components/Modal";
 import GuideTabs from "./GuideTabs";
 import { CES_TEXT, SE_TEXT, TSE_TEXT } from "./metricsCopy";
@@ -11,7 +13,70 @@ import {
 } from "../../lib/metrics";
 import ActionSuccessRadar from "./ActionSuccessRadar";
 
-export default function Dashboard({ trainingBouts = [], compBouts = [], lessons = [] }) {
+/* --- New: compact Profile dropdown (only addition) --- */
+function ProfileMenu({ onProfile, onSignOut }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!ref.current) return;
+      if (!ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleProfile = () => {
+    onProfile ? onProfile() : console.log("Profile clicked");
+    setOpen(false);
+  };
+  const handleSignOut = () => {
+    onSignOut ? onSignOut() : console.log("Sign out clicked");
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
+        aria-haspopup="menu"
+        aria-expanded={open ? "true" : "false"}
+      >
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-900 text-white text-xs font-bold">
+          P
+        </span>
+        <span className="hidden sm:inline">Profile</span>
+        <svg className="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div role="menu" className="absolute right-0 mt-2 w-44 rounded-xl border bg-white p-1 shadow-lg">
+          <button role="menuitem" onClick={handleProfile} className="w-full text-left rounded-lg px-3 py-2 text-sm hover:bg-gray-50">
+            Profile
+          </button>
+          <button role="menuitem" onClick={handleSignOut} className="w-full text-left rounded-lg px-3 py-2 text-sm text-rose-600 hover:bg-rose-50">
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Dashboard component ---------- */
+export default function Dashboard({
+  trainingBouts = [],
+  compBouts = [],
+  lessons = [],
+  /* New optional handlers (only addition) */
+  onProfile,
+  onSignOut,
+}) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideTab, setGuideTab] = useState("CES");
 
@@ -44,13 +109,13 @@ export default function Dashboard({ trainingBouts = [], compBouts = [], lessons 
   const todayCalc = computeCESFromTotals(todayTotals);
   const winCalc   = computeCESFromTotals(winTotals);
 
-  // Season Efficiency using default settings from metrics.js
+  // Season Efficiency (unchanged)
   const se = computeSeasonEfficiency({ trainingBouts, compBouts, lessons });
 
-  // Radar data for action success %
+  // Radar data (unchanged)
   const radarData = computeActionSuccessData(trainingBouts, compBouts);
 
-  // TSE (Time-segment Efficiency)
+  // TSE (unchanged)
   const segmentTotals = { early: { A:0,P:0 }, mid:{A:0,P:0}, late:{A:0,P:0} };
   compBouts.forEach(b => {
     ["E","M","L"].forEach((seg, idx) => {
@@ -73,8 +138,8 @@ export default function Dashboard({ trainingBouts = [], compBouts = [], lessons 
 
   return (
     <div className="space-y-4">
-      {/* Top bar */}
-      <div className="flex items-center justify-end">
+      {/* Top bar — keep original placement; just add the Profile dropdown */}
+      <div className="flex items-center justify-end gap-2">
         <button
           onClick={() => setGuideOpen(true)}
           className="rounded-xl border px-3 py-2 text-sm hover:bg-gray-50"
@@ -82,9 +147,12 @@ export default function Dashboard({ trainingBouts = [], compBouts = [], lessons 
         >
           Metrics Guide
         </button>
+
+        {/* New: Profile dropdown (Profile + Sign out) */}
+        <ProfileMenu onProfile={onProfile} onSignOut={onSignOut} />
       </div>
 
-      {/* Metrics Grid */}
+      {/* Metrics Grid (unchanged) */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* CES Today */}
         <div className="rounded-2xl border bg-white p-4">
@@ -146,16 +214,16 @@ export default function Dashboard({ trainingBouts = [], compBouts = [], lessons 
         </div>
 
         {/* Action Points Share Radar */}
-<div className="rounded-2xl border bg-white p-4 md:col-span-2">
-  <div className="text-lg font-semibold">Action Points Share % — Training vs Competition</div>
-  <ActionSuccessRadar data={radarData} />
-  <div className="text-xs text-slate-500 mt-2">
-    Each value is the share of **points scored** in that action family out of all points for that series (Training or Competition). Attempts are not used.
-  </div>
-</div>
+        <div className="rounded-2xl border bg-white p-4 md:col-span-2">
+          <div className="text-lg font-semibold">Action Points Share % — Training vs Competition</div>
+          <ActionSuccessRadar data={radarData} />
+          <div className="text-xs text-slate-500 mt-2">
+            Each value is the share of **points scored** in that action family out of all points for that series (Training or Competition). Attempts are not used.
+          </div>
+        </div>
       </div>
 
-      {/* Metrics Guide modal */}
+      {/* Metrics Guide modal (unchanged) */}
       <Modal open={guideOpen} onClose={() => setGuideOpen(false)} title="Metrics Guide">
         <div className="mb-3"><GuideTabs active={guideTab} setActive={setGuideTab} /></div>
         <div className="mt-2">
@@ -167,4 +235,5 @@ export default function Dashboard({ trainingBouts = [], compBouts = [], lessons 
     </div>
   );
 }
+
 

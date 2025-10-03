@@ -1,4 +1,5 @@
 // src/App.jsx
+
 import { useState } from "react";
 import TabButton from "./components/TabButton";
 import Dashboard from "./features/dashboard/Dashboard";
@@ -10,9 +11,11 @@ import ProfileScreen from "./features/profile/ProfileScreen";
 
 // Auth bits
 import AuthForm from "./features/auth/AuthForm";
-import SignOutButton from "./features/auth/SignOutButton";
 import VerifyEmailBanner from "./features/auth/VerifyEmailBanner";
 import { useAuth } from "./context/AuthContext";
+
+// NEW: direct Firebase sign-out (removes need for a visible SignOutButton)
+import { getAuth, signOut as fbSignOut } from "firebase/auth";
 
 export default function App() {
   const { user, loading } = useAuth(); // live Firebase auth state
@@ -55,6 +58,17 @@ export default function App() {
     alert("Lesson saved ✔");
   };
 
+  // Centralized sign-out (used by Dashboard's Profile dropdown)
+  const handleSignOut = async () => {
+    try {
+      await fbSignOut(getAuth());
+      // AuthContext should react to onAuthStateChanged and return user to AuthForm automatically
+    } catch (err) {
+      console.error("Sign-out failed:", err);
+      alert("Sign-out failed. Please try again.");
+    }
+  };
+
   // Loading session from Firebase
   if (loading) {
     return (
@@ -74,7 +88,7 @@ export default function App() {
         </div>
       </div>
     );
-    }
+  }
 
   // Authenticated → show full app
   return (
@@ -87,19 +101,19 @@ export default function App() {
               Signed in as <span className="font-medium">{user.displayName || user.email}</span>
             </p>
           </div>
-          <SignOutButton />
+          {/* Removed the old visible SignOutButton to free space (now handled via Dashboard dropdown) */}
+          <div />
         </header>
 
         {/* 🔔 Email verification banner (shown only if not verified) */}
         <VerifyEmailBanner user={user} />
 
-        {/* Tabs */}
-        <nav className="mb-6 grid grid-cols-5 gap-2">
+        {/* Tabs: now ONLY the four requested tabs (no Profile tab here) */}
+        <nav className="mb-6 grid grid-cols-4 gap-2">
           <TabButton label="Dashboard"        active={tab === "dashboard"}   onClick={() => setTab("dashboard")} />
-          <TabButton label="Training Bout"     active={tab === "training"}    onClick={() => setTab("training")} />
-          <TabButton label="Competition Bout"  active={tab === "competition"} onClick={() => setTab("competition")} />
-          <TabButton label="Lesson"            active={tab === "lesson"}      onClick={() => setTab("lesson")} />
-          <TabButton label="Profile"           active={tab === "profile"}     onClick={() => setTab("profile")} />
+          <TabButton label="Training Bout"    active={tab === "training"}    onClick={() => setTab("training")} />
+          <TabButton label="Competition Bout" active={tab === "competition"} onClick={() => setTab("competition")} />
+          <TabButton label="Lesson"           active={tab === "lesson"}      onClick={() => setTab("lesson")} />
         </nav>
 
         {tab === "dashboard" && (
@@ -107,6 +121,9 @@ export default function App() {
             trainingBouts={trainingBouts}
             compBouts={compBouts}
             lessons={lessons}
+            // Wire the dropdown:
+            onProfile={() => setTab("profile")}
+            onSignOut={handleSignOut}
           />
         )}
 
@@ -126,6 +143,7 @@ export default function App() {
 
         {tab === "lesson" && <LessonForm onSave={saveLesson} />}
 
+        {/* Profile screen still available; it is opened via the Dashboard dropdown */}
         {tab === "profile" && <ProfileScreen />}
       </div>
     </div>
