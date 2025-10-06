@@ -12,7 +12,7 @@ import {
 } from "recharts";
 
 // === Label color + size settings ===
-const AXIS_LABEL_FONT_SIZE = 18; // increase to 16 if you want even bigger
+const AXIS_LABEL_FONT_SIZE = 20; // tweak if you want bigger/smaller
 
 // Normalize label (remove different dash types, collapse spaces, lowercase)
 const normalizeLabel = (raw) =>
@@ -24,11 +24,37 @@ const normalizeLabel = (raw) =>
 
 // Map normalized labels to colors
 const CATEGORY_COLOR_BY_KEY = {
-  "attack": "#ef4444",           // red
-  "parry riposte": "#10b981",    // green (covers “Parry-Riposte” & “Parry Riposte”)
-  "preparation": "#10b981",      // green (keep if your data uses “Preparation”)
-  "counter": "#60a5fa",          // light blue
-  "second intention": "#f59e0b", // yellow (covers “Second-Intention”, “Second Int.”)
+  attack: "#ef4444",            // red
+  "parry riposte": "#10b981",   // green
+  counter: "#60a5fa",           // light blue
+  "second intention": "#f59e0b" // yellow
+};
+
+// ✨ NEW: Map normalized full labels → short labels (edit as you wish)
+const SHORT_LABEL_BY_KEY = {
+  attack: "ATT",
+  "parry riposte": "P-R",
+  counter: "CTR",
+  "second intention": "2IN",
+};
+
+// Fallback abbreviation builder if a label isn't in SHORT_LABEL_BY_KEY
+const buildAbbrev = (original) => {
+  const norm = normalizeLabel(original);
+  if (!norm) return "";
+  const parts = norm.split(" ");
+  if (parts.length >= 2) {
+    // Take initials of up to first 2–3 words, e.g. "second intention" -> "SI"
+    return parts.slice(0, 3).map(w => w[0]).join("").toUpperCase();
+  }
+  // Single word: first 3 chars uppercased
+  return norm.slice(0, 3).toUpperCase();
+};
+
+// Get the short label we will render on the axis
+const getShortLabel = (original) => {
+  const norm = normalizeLabel(original);
+  return SHORT_LABEL_BY_KEY[norm] || buildAbbrev(original);
 };
 
 export default function ActionSuccessRadar({ data = [], height }) {
@@ -79,12 +105,14 @@ export default function ActionSuccessRadar({ data = [], height }) {
   // Keep the legend from overlapping the chart when shown
   const topMargin = seriesKeys.length > 1 ? 40 : 12;
 
-  // Colored/bigger axis labels
+  // Colored/bigger axis labels — now using short labels
   const renderColoredTick = (props) => {
     const { x, y, payload, textAnchor } = props;
     const original = String(payload?.value ?? "");
     const normalized = normalizeLabel(original);
     const fill = CATEGORY_COLOR_BY_KEY[normalized] || "#0f172a"; // slate-900 default
+    const shortText = getShortLabel(original);
+
     return (
       <text
         x={x}
@@ -94,7 +122,7 @@ export default function ActionSuccessRadar({ data = [], height }) {
         fontWeight={700}
         fontSize={AXIS_LABEL_FONT_SIZE}
       >
-        {original}
+        {shortText}
       </text>
     );
   };
@@ -104,8 +132,14 @@ export default function ActionSuccessRadar({ data = [], height }) {
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} margin={{ top: topMargin, right: 24, bottom: 12, left: 24 }}>
           <PolarGrid />
+
+          {/* Shortened, colored axis labels */}
           <PolarAngleAxis dataKey={labelKey} tick={renderColoredTick} />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+
+          {/* 🔕 Hide radial tick labels (0%, 25%, 50%, 75%, 100%) */}
+          <PolarRadiusAxis angle={0} domain={[0, 100]} tick={false} />
+
+          {/* Tooltip still shows values as percentages; remove formatter if you want raw numbers */}
           <Tooltip formatter={(v) => `${v}%`} />
 
           {/* One or more series */}
